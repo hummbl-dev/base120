@@ -5,13 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "base120"
 version = "1.0.0"
-description = "Base120 v1.0.0 Reference Implementation"
-requires-python = ">=3.10"
-license = { text = "MIT" }
+description = "Deterministic governance substrate implementing the Base120 executable mental model system"
+dependencies = [
+  "jsonschema>=4.0"
+]
 
-[project.scripts]
-base120 = "base120.cli.main:main"
+[project.optional-dependencies]
+test = [
+  "pytest"
+]
 
-
-[project]
-dependencies = ["jsonschema>=4.0"]
+[tool.setuptools]
+packages = ["base120"]

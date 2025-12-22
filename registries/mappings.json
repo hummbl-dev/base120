@@ -1,6 +1,5 @@
 {
-  "registry_version": "1.0.0",
-  "base120_version": "v1.0.0",
+  "version": "v1.0.0",
   "mapping_scope": "system_error_subclass_to_failure_modes",
   "mappings": {
     "00": ["FM1", "FM7", "FM30"],
