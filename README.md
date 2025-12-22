@@ -12,3 +12,8 @@ All other language implementations are semantics mirrors and MUST conform
 exactly
 to the outputs defined here.
 
+## Canonical Authority
+
+This repository is the authoritative, executable reference for Base120 v1.x.
+All other language implementations are semantic mirrors and MUST match the
+outputs defined by the golden corpus in `tests/corpus`.
