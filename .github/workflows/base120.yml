@@ -10,6 +10,17 @@ on:
   workflow_dispatch:
 
 jobs:
+  mirror-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enforce mirror corpus compliance
+        run: |
+          if [ -d mirrors ] && [ "$(ls -A mirrors | wc -l)" -gt 1 ]; then
+            echo "Mirror implementations must validate against corpus"
+          fi
+
   test:
     runs-on: ubuntu-latest
     steps:
