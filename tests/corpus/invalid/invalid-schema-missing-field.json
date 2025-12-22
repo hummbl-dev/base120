@@ -1,0 +1,6 @@
+{
+  "id": "artifact-invalid-001",
+  "domain": "core",
+  "class": "example",
+  "models": ["FM1"]
+}
