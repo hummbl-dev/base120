@@ -12,3 +12,6 @@ license = { text = "MIT" }
 [project.scripts]
 base120 = "base120.cli.main:main"
 
+
+[project]
+dependencies = ["jsonschema>=4.0"]
