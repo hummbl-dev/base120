@@ -1,5 +1,10 @@
 {
   "version": "v1.0.0",
-  "registry": []
-}
+  "registry": [
+    { "id": "FM1",  "name": "Specification Ambiguity" },
+    { "id": "FM2",  "name": "Unbounded Scope" },
+    ...
+    { "id": "FM30", "name": "Unrecoverable System State" }
+  ]
+}}
 
