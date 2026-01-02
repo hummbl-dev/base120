@@ -160,14 +160,16 @@ def test_unknown_artifact_id():
         "instance": "test",
         "models": ["FM1"]
     }
-    
+
     errors = validate_artifact(artifact, SCHEMA, MAPPINGS, ERR_REGISTRY, event_sink=event_sink)
-    assert errors == []
-    
+    assert errors == ["ERR-SCHEMA-001"], "Missing id should fail schema validation"
+
     output.seek(0)
     event = json.loads(output.read().strip())
     
     assert event["artifact_id"] == "unknown"
+    assert event["result"] == "failure"
+    assert "ERR-SCHEMA-001" in event["error_codes"]
 
 
 def test_create_validator_event_with_correlation_id():
