@@ -1,0 +1,9 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": [],
+    "python.analysis.typeCheckingMode": "strict",
+    "python.analysis.generateWithTypeAnnotation": true,
+    "python.analysis.typeEvaluation.enableExperimentalFeatures": true,
+    "python.analysis.typeEvaluation.strictDictionaryInference": true,
+    "python.analysis.diagnosticMode": "workspace"
+}
