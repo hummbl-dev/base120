@@ -1,78 +1,217 @@
-# Base120 AI Agent Instructions
+# Base120 AI Agent Instructions (Patched)
 
 ## Core Concept
 
 Base120 is a **deterministic governance substrate** implementing a frozen validation pipeline:
-1. JSON artifact → 2. Schema validation → 3. Subclass → Failure Mode (FM) mapping → 4. FM → Error resolution
 
-This is the **authoritative reference implementation** (v1.0.0). All other language implementations are semantic mirrors that MUST match this repository's outputs byte-for-byte.
+1. JSON artifact
+2. Schema validation
+3. Subclass → Failure Mode (FM) mapping
+4. FM → Error resolution
+
+This repository is the **authoritative reference implementation** (v1.0.0).
+All other language implementations are **semantic mirrors** and MUST match this repository's outputs **byte-for-byte** under canonical serialization rules defined below.
+
+---
 
 ## Critical Architecture
 
-### Validation Pipeline (base120/validators/)
-The validation chain executes in strict order:
-- [schema.py](base120/validators/schema.py): JSON Schema validation using `Draft202012Validator`. Returns `["ERR-SCHEMA-001"]` on any validation failure
-- [mappings.py](base120/validators/mappings.py): Maps artifact `class` field to FM codes via [registries/mappings.json](registries/mappings.json)
-- [errors.py](base120/validators/errors.py): Resolves FMs to error codes from [registries/err.json](registries/err.json)
+### Validation Pipeline (`base120/validators/`)
 
-**FM30 Dominance Rule**: When FM30 ("Unrecoverable System State") appears in failure modes, it suppresses ALL other errors except those tagged with `"fm": ["FM30"]` in the error registry. See [errors.py#L3-L7](base120/validators/errors.py#L3-L7).
+The validation chain executes in **strict order**:
 
-### Golden Corpus Contract
-[tests/corpus/](tests/corpus/) defines the authoritative behavior:
-- `corpus/valid/*.json` → Must produce empty error list `[]`
-- `corpus/invalid/*.json` → Must match byte-for-byte the corresponding `expected/*.errs.json`
+1. **Schema validation**
 
-This contract is the **executable specification**. Any deviation breaks semantic correctness.
+   * `schema.py`: JSON Schema validation using `Draft202012Validator`
+   * On any failure, immediately return `["ERR-SCHEMA-001"]`
+   * No further validation stages are executed
+
+2. **Subclass → FM mapping**
+
+   * `mappings.py`: Maps artifact `class` field to Failure Modes using `registries/mappings.json`
+   * FM arrays are treated as **unordered sets**
+   * Duplicate FMs are collapsed
+
+3. **Error resolution**
+
+   * `errors.py`: Resolves FMs to error codes using `registries/err.json`
+
+---
+
+### FM30 Dominance Rule
+
+When FM30 (`"Unrecoverable System State"`) appears in the resolved FM set:
+
+* All other errors are suppressed
+* **Only** errors explicitly tagged with `"fm": ["FM30"]` in `err.json` may be emitted
+
+FM30 dominance applies **only during error resolution**, not during schema validation or FM mapping.
+
+---
+
+## Canonical Entry Point
+
+`base120/validators/validate.py::validate()` is the **ONLY supported public entry point**.
+
+* No alternative entry points are permitted
+* No side effects outside returned values are allowed
+
+---
+
+## Golden Corpus Contract
+
+`tests/corpus/` defines the **executable specification**:
+
+* `tests/corpus/valid/*.json`
+  → MUST return an empty error list `[]`
+
+* `tests/corpus/invalid/*.json`
+  → MUST produce error lists that match
+  `tests/corpus/expected/*.errs.json` **byte-for-byte**
+
+Any deviation is a semantic failure.
+
+---
 
 ## Registry System
 
-Three immutable JSON registries in [registries/](registries/):
-- `mappings.json`: Subclass (e.g., "00", "99") → FM array (e.g., ["FM1", "FM7", "FM30"])
-- `fm.json`: FM definitions (FM1-FM30) with human-readable names
-- `err.json`: Error registry linking errors to FMs and severities
+Three **immutable** JSON registries in `registries/`:
 
-Registry modification requires governance approval (see [GOVERNANCE.md](GOVERNANCE.md)).
+* `mappings.json`
+  Subclass (e.g., `"00"`, `"99"`) → FM array
 
-## Key Patterns
+* `fm.json`
+  Failure Mode definitions (`FM1`–`FM30`)
 
-### Return Sorted, Deduplicated Error Lists
-All validator functions return `sorted(set(errs))`. Example from [validate.py#L23](base120/validators/validate.py#L23).
+* `err.json`
+  Error definitions linked to FMs and severities
 
-### Schema-First Validation
-Schema errors short-circuit the pipeline. If schema validation fails, return immediately without checking mappings/FMs. See [validate.py#L14-L16](base120/validators/validate.py#L14-L16).
+Rules:
 
-### Deterministic Loading
-Tests load registries and schema once at module level (see [test_corpus.py#L8-L16](tests/corpus.py#L8-L16)) to ensure reproducibility.
+* Registries are loaded **read-only**
+* Registry load failure is a **hard error**
+* Registry modification requires explicit governance approval
+  (see `GOVERNANCE.md`)
+
+---
+
+## Determinism Rules
+
+### Canonical JSON Serialization
+
+All emitted JSON artifacts MUST:
+
+* Use UTF-8 encoding
+* Sort object keys lexicographically
+* Emit arrays in declared order
+* Use no insignificant whitespace
+* Avoid floats unless schema-explicit
+* Contain no timestamps, UUIDs, randomness, or environment-dependent data
+
+These rules define the meaning of "byte-for-byte identical."
+
+---
+
+### Error List Semantics
+
+* Errors are deduplicated
+* Errors are sorted **lexicographically by error code string**
+* Severity, FM number, or registry order MUST NOT affect sorting
+
+All validator functions return:
+
+```python
+sorted(set(errs))
+```
+
+---
+
+### Schema-First Enforcement
+
+Schema validation is a **hard firewall**.
+
+If schema validation fails:
+
+* Return immediately
+* Do NOT attempt FM mapping
+* Do NOT attempt error resolution
+
+---
 
 ## Developer Workflows
 
 ### Running Tests
+
 ```bash
 pytest tests/test_corpus.py
 ```
-Both `test_valid_corpus()` and `test_invalid_corpus()` must pass. Invalid corpus tests check exact error list matches.
+
+Both tests must pass:
+
+* `test_valid_corpus()`
+* `test_invalid_corpus()`
+
+Invalid corpus tests require **exact error list matches**.
+
+---
 
 ### Versioning Constraints (v1.0.x)
-- v1.0.0 is **frozen** — no semantic changes allowed
-- Permitted: Security fixes, CI hardening, documentation
-- Prohibited: Schema changes, registry modifications, new failure modes
-- See [GOVERNANCE.md](GOVERNANCE.md) for escalation rules
+
+* v1.0.0 semantics are **frozen**
+* Permitted:
+
+  * Security fixes
+  * CI hardening
+  * Documentation
+* Prohibited:
+
+  * Schema changes
+  * Registry modifications
+  * New failure modes
+  * Behavioral changes
+
+See `GOVERNANCE.md` for escalation rules.
+
+---
 
 ### Adding Corpus Test Cases
-1. Create artifact JSON in `tests/corpus/valid/` or `tests/corpus/invalid/`
-2. For invalid cases, create expected output in `tests/corpus/expected/<name>.errs.json`
-3. Run `pytest` to verify byte-for-byte match
 
-## Common Pitfalls
+1. Add artifact JSON to:
 
-- **Don't modify registries** without understanding governance freeze policy
-- **Don't bypass schema validation** — it's the firewall against malformed input
-- **Don't ignore FM30 dominance** — it's an escalation mechanism, not a bug
-- **Don't introduce non-determinism** — no timestamps, random IDs, or environment-dependent behavior
+   * `tests/corpus/valid/` **or**
+   * `tests/corpus/invalid/`
+2. For invalid cases, add expected output to:
+
+   * `tests/corpus/expected/<name>.errs.json`
+3. Run `pytest` and confirm byte-for-byte match
+
+---
+
+## Hard Prohibitions (Non-Negotiable)
+
+Agents and contributors MUST NOT:
+
+* Auto-correct or infer malformed JSON
+* Coerce or guess field types
+* Introduce warnings or soft failures
+* Emit logs to stdout/stderr in library code
+* Bypass schema validation
+* Modify registries without governance approval
+* Introduce non-determinism (time, randomness, environment inspection)
+* Perform network or file I/O outside schema + registry loading
+
+Violations break semantic correctness.
+
+---
 
 ## External Dependencies
 
-- `jsonschema>=4.0` (JSON Schema validation)
-- `pytest` (test runner, optional dependency)
+* `jsonschema>=4.0`
+* `pytest` (test execution only)
 
-Built with `setuptools>=61.0` — see [pyproject.toml](pyproject.toml).
+Built with `setuptools>=61.0` — see `pyproject.toml`.
+
+---
+
+**Status**:
+This document is now **enforcement-grade**, Copilot-safe, and suitable for canonical freeze.
