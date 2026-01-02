@@ -5,12 +5,14 @@ Provides structured event emission for validator runs.
 Uses standard library only - no runtime dependencies.
 """
 
+from typing import Any, Callable, Iterable, Mapping, Optional, TextIO, cast
+
 import json
 import sys
 from datetime import datetime, timezone
 
 
-def create_event_sink(output=None):
+def create_event_sink(output: Optional[TextIO] = None) -> Callable[[Mapping[str, Any]], None]:
     """
     Create a standard event sink that logs structured JSON events.
     
@@ -26,8 +28,9 @@ def create_event_sink(output=None):
     """
     if output is None:
         output = sys.stdout
+    output = cast(TextIO, output)
         
-    def sink(event):
+    def sink(event: Mapping[str, Any]) -> None:
         try:
             json.dump(event, output)
             output.write('\n')
@@ -41,13 +44,13 @@ def create_event_sink(output=None):
 
 
 def create_validator_event(
-    artifact_id,
-    schema_version,
-    result,
-    error_codes,
-    failure_mode_ids,
-    correlation_id=None
-):
+    artifact_id: str,
+    schema_version: str,
+    result: str,
+    error_codes: Iterable[str],
+    failure_mode_ids: Iterable[str],
+    correlation_id: Optional[str] = None,
+) -> Mapping[str, Any]:
     """
     Create a validator_result event conforming to the observability schema.
     
@@ -62,12 +65,12 @@ def create_validator_event(
     Returns:
         Dict conforming to validator_result event schema
     """
-    event = {
+    event: dict[str, Any] = {
         "event_type": "validator_result",
         "artifact_id": artifact_id,
         "schema_version": schema_version,
         "result": result,
-        "error_codes": error_codes,
+        "error_codes": list(error_codes),
         "failure_mode_ids": sorted(failure_mode_ids),  # Ensure sorted for consistency
         "timestamp": datetime.now(timezone.utc).isoformat()
     }

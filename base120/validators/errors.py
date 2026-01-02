@@ -1,14 +1,18 @@
-def resolve_errors(fms: list[str], err_registry: list[dict]) -> list[str]:
+from typing import Any, Mapping, Sequence
+
+
+def resolve_errors(fms: list[str], err_registry: Sequence[Mapping[str, Any]]) -> list[str]:
     # FM30 dominance: escalation suppresses all other errors
     if "FM30" in fms:
         return sorted(
-            entry["id"]
+            str(entry.get("id", ""))
             for entry in err_registry
-            if "FM30" in entry["fm"]
+            if "FM30" in entry.get("fm", [])
         )
 
-    errs = []
+    errs: list[str] = []
     for entry in err_registry:
-        if any(fm in fms for fm in entry["fm"]):
-            errs.append(entry["id"])
+        fm_list = entry.get("fm", [])
+        if any(fm in fms for fm in fm_list):
+            errs.append(str(entry.get("id", "")))
     return sorted(set(errs))
