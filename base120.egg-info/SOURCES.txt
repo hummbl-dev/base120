@@ -2,9 +2,11 @@ LICENSE
 README.md
 pyproject.toml
 base120/__init__.py
+base120/observability.py
 base120.egg-info/PKG-INFO
 base120.egg-info/SOURCES.txt
 base120.egg-info/dependency_links.txt
 base120.egg-info/requires.txt
 base120.egg-info/top_level.txt
 tests/test_corpus.py
+tests/test_observability.py

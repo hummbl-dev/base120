@@ -1,17 +1,19 @@
+from typing import Any, Callable, Mapping, MutableSequence, Optional, Sequence
+
 from base120.validators.schema import validate_schema
 from base120.validators.mappings import resolve_failure_modes
 from base120.validators.errors import resolve_errors
 
 def validate_artifact(
-    artifact: dict,
-    schema: dict,
-    mappings: dict,
-    err_registry: list[dict],
-    event_sink=None
+    artifact: Mapping[str, Any],
+    schema: Mapping[str, Any],
+    mappings: Mapping[str, Any],
+    err_registry: Sequence[Mapping[str, Any]],
+    event_sink: Optional[Callable[[Mapping[str, Any]], None]] = None,
 ) -> list[str]:
 
-    errs = []
-    fms = []
+    errs: MutableSequence[str] = []
+    fms: list[str] = []
 
     # 1. Schema validation
     errs.extend(validate_schema(artifact, schema))
@@ -22,7 +24,7 @@ def validate_artifact(
         return sorted(set(errs))
 
     # 2. Subclass → FM
-    subclass = artifact.get("class")
+    subclass = str(artifact.get("class", ""))
     fms = resolve_failure_modes(subclass, mappings)
 
     # 3. FM → ERR
@@ -34,7 +36,12 @@ def validate_artifact(
     return sorted(set(errs))
 
 
-def _emit_event(artifact, error_codes, failure_mode_ids, event_sink):
+def _emit_event(
+    artifact: Mapping[str, Any],
+    error_codes: Sequence[str],
+    failure_mode_ids: Sequence[str],
+    event_sink: Optional[Callable[[Mapping[str, Any]], None]],
+) -> None:
     """
     Emit validator_result event if event_sink is provided.
     
@@ -54,7 +61,7 @@ def _emit_event(artifact, error_codes, failure_mode_ids, event_sink):
             schema_version="v1.0.0",
             result=result,
             error_codes=sorted(set(error_codes)),
-            failure_mode_ids=failure_mode_ids
+            failure_mode_ids=list(failure_mode_ids),
         )
         
         event_sink(event)

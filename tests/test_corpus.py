@@ -15,7 +15,7 @@ with open(ROOT / "registries" / "mappings.json") as f:
 with open(ROOT / "registries" / "err.json") as f:
     ERR_REGISTRY = json.load(f)["registry"]
 
-def load_json(path):
+def load_json(path: str | Path):
     with open(path) as f:
         return json.load(f)
 

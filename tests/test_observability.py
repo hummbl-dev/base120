@@ -7,6 +7,7 @@ Verifies event emission contract for validator runs.
 import json
 from pathlib import Path
 from io import StringIO
+from typing import Any, Mapping
 
 from base120.validators.validate import validate_artifact
 from base120.observability import create_event_sink, create_validator_event
@@ -130,7 +131,7 @@ def test_backward_compatibility_without_event_sink():
 
 def test_event_emission_failure_does_not_propagate():
     """Errors during event emission do not affect validation."""
-    def failing_sink(event):
+    def failing_sink(event: Mapping[str, Any]) -> None:
         raise Exception("Event emission failed!")
     
     artifact = {
@@ -159,13 +160,16 @@ def test_unknown_artifact_id():
         "instance": "test",
         "models": ["FM1"]
     }
-    
+
     errors = validate_artifact(artifact, SCHEMA, MAPPINGS, ERR_REGISTRY, event_sink=event_sink)
-    
+    assert errors == ["ERR-SCHEMA-001"], "Missing id should fail schema validation"
+
     output.seek(0)
     event = json.loads(output.read().strip())
     
     assert event["artifact_id"] == "unknown"
+    assert event["result"] == "failure"
+    assert "ERR-SCHEMA-001" in event["error_codes"]
 
 
 def test_create_validator_event_with_correlation_id():
