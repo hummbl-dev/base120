@@ -22,3 +22,73 @@ outputs defined by the golden corpus in `tests/corpus`.
 
 - v1.0.0 — semantic specification freeze
 - v1.0.0-post-ci — CI-stabilized, corpus-verified release (recommended)
+
+## Observability
+
+Base120 v1.0.0 includes a **minimal, semantics-preserving observability layer** 
+for production deployments. This layer:
+
+- **Emits structured JSON events** for validation success and failure
+- **Is opt-in** via an optional `event_sink` parameter (backward compatible)
+- **Uses standard library only** (no runtime dependencies)
+- **Never affects validation semantics** or determinism
+
+### Quick Start
+
+```python
+from base120.validators.validate import validate_artifact
+from base120.observability import create_event_sink
+import json
+
+# Load schemas and registries
+with open("schemas/v1.0.0/artifact.schema.json") as f:
+    schema = json.load(f)
+with open("registries/mappings.json") as f:
+    mappings = json.load(f)
+with open("registries/err.json") as f:
+    err_registry = json.load(f)["registry"]
+
+# Create event sink (logs to stdout)
+event_sink = create_event_sink()
+
+# Validate with observability
+artifact = {"id": "test-001", "domain": "core", "class": "example", 
+            "instance": "test", "models": ["FM1"]}
+errors = validate_artifact(artifact, schema, mappings, err_registry, 
+                          event_sink=event_sink)
+```
+
+### Event Schema
+
+Each validation emits one `validator_result` event:
+
+```json
+{
+  "event_type": "validator_result",
+  "artifact_id": "artifact-001",
+  "schema_version": "v1.0.0",
+  "result": "success",
+  "error_codes": [],
+  "failure_mode_ids": [],
+  "timestamp": "2026-01-02T22:15:00.123456Z"
+}
+```
+
+### Documentation
+
+- **Full specification:** [`docs/observability.md`](docs/observability.md)
+- **Event schema:** Fields, guarantees, and integration patterns
+- **Governance status:** Part of v1.0.x contract (Indicated work per FM19)
+
+### Backward Compatibility
+
+Omitting `event_sink` (default) preserves original v1.0.0 behavior with no 
+observability overhead:
+
+```python
+# No events emitted, identical to original v1.0.0
+errors = validate_artifact(artifact, schema, mappings, err_registry)
+```
+
+This observability layer addresses **FM19 (Observability Failure)** from the 
+Base120 governance framework and is production-ready for deployment monitoring.
