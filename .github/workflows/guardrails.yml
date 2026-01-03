@@ -1,5 +1,8 @@
 name: Base120 Guardrails
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
