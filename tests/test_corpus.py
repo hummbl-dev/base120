@@ -20,13 +20,13 @@ def load_json(path: str | Path):
         return json.load(f)
 
 def test_valid_corpus():
-    for path in (CORPUS / "valid").glob("*.json"):
+    for path in sorted((CORPUS / "valid").glob("*.json")):
         artifact = load_json(path)
         errs = validate_artifact(artifact, SCHEMA, MAPPINGS, ERR_REGISTRY)
         assert errs == [], f"{path.name} produced {errs}"
 
 def test_invalid_corpus():
-    for path in (CORPUS / "invalid").glob("*.json"):
+    for path in sorted((CORPUS / "invalid").glob("*.json")):
         artifact = load_json(path)
         expected = load_json(
             CORPUS / "expected" / f"{path.stem}.errs.json"
