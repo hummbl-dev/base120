@@ -13,6 +13,9 @@ on:
       - 'compliance/**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   verify-seed-hash:
     name: Verify Seed Hash Matches MRCC
