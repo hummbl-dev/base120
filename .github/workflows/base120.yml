@@ -1,5 +1,8 @@
 name: Base120 CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
