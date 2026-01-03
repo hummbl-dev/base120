@@ -1,0 +1,170 @@
+name: Governance Version Policy
+
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  version-policy:
+    name: Enforce Version Policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Detect version
+        id: version
+        run: |
+          # Get version from pyproject.toml
+          VERSION=$(grep '^version' pyproject.toml | cut -d'"' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+          
+          # Check if v1.0.x
+          if [[ "$VERSION" =~ ^1\.0\. ]]; then
+            echo "is_v1_0_x=true" >> $GITHUB_OUTPUT
+            echo "This is a v1.0.x release (frozen specification)"
+          else
+            echo "is_v1_0_x=false" >> $GITHUB_OUTPUT
+            echo "This is not a v1.0.x release"
+          fi
+      
+      - name: Check v1.0.x prohibited changes
+        if: steps.version.outputs.is_v1_0_x == 'true'
+        run: |
+          echo "🔒 v1.0.x Version Policy Enforcement"
+          echo "===================================="
+          echo ""
+          echo "Version: ${{ steps.version.outputs.version }}"
+          echo "Policy: Frozen specification"
+          echo ""
+          
+          # Get changed files
+          git fetch origin ${{ github.base_ref }}
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          echo ""
+          
+          # Initialize violation flag
+          VIOLATIONS=""
+          
+          # Check for schema modifications
+          if echo "$CHANGED_FILES" | grep -qE "^schemas/v1\.0\.0/.*\.json$"; then
+            VIOLATIONS="${VIOLATIONS}❌ PROHIBITED: Schema modifications detected\n"
+            VIOLATIONS="${VIOLATIONS}   Files: $(echo "$CHANGED_FILES" | grep -E '^schemas/v1\.0\.0/')\n"
+            VIOLATIONS="${VIOLATIONS}   Policy: Schema changes prohibited in v1.0.x\n\n"
+          fi
+          
+          # Check for registry modifications
+          if echo "$CHANGED_FILES" | grep -qE "^registries/.*\.json$"; then
+            VIOLATIONS="${VIOLATIONS}❌ PROHIBITED: Registry modifications detected\n"
+            VIOLATIONS="${VIOLATIONS}   Files: $(echo "$CHANGED_FILES" | grep -E '^registries/')\n"
+            VIOLATIONS="${VIOLATIONS}   Policy: Registry changes prohibited in v1.0.x\n\n"
+          fi
+          
+          # Check for validator semantic changes
+          if echo "$CHANGED_FILES" | grep -qE "base120/validators/(mappings|errors|validate)\.py"; then
+            # Check if changes are semantic (more complex check needed)
+            VIOLATIONS="${VIOLATIONS}⚠️ WARNING: Validator logic changes detected\n"
+            VIOLATIONS="${VIOLATIONS}   Files: $(echo "$CHANGED_FILES" | grep -E 'base120/validators/')\n"
+            VIOLATIONS="${VIOLATIONS}   Policy: Semantic changes prohibited in v1.0.x\n"
+            VIOLATIONS="${VIOLATIONS}   Action: Verify changes are security fixes or non-semantic\n\n"
+          fi
+          
+          # Report violations
+          if [ -n "$VIOLATIONS" ]; then
+            echo "GOVERNANCE VIOLATIONS DETECTED"
+            echo "=============================="
+            echo ""
+            echo -e "$VIOLATIONS"
+            echo "v1.0.x Permitted Changes:"
+            echo "  ✅ Security fixes (with audit)"
+            echo "  ✅ CI hardening (with audit)"
+            echo "  ✅ Documentation clarifications"
+            echo "  ✅ Corpus additions (with audit)"
+            echo ""
+            echo "v1.0.x Prohibited Changes:"
+            echo "  ❌ Schema modifications"
+            echo "  ❌ Registry modifications"
+            echo "  ❌ Semantic validator changes"
+            echo "  ❌ Breaking changes"
+            echo "  ❌ New failure modes"
+            echo ""
+            echo "See GOVERNANCE.md Section: Version Policy"
+            echo ""
+            echo "If you believe this is a false positive, please:"
+            echo "  1. Add justification to PR description"
+            echo "  2. Request governance override"
+            echo "  3. Tag @hummbl-dev for review"
+            
+            # Check if violations include hard prohibitions (schemas or registries)
+            if echo "$CHANGED_FILES" | grep -qE "^(schemas/v1\.0\.0/|registries/).*\.json$"; then
+              echo ""
+              echo "❌ HARD FAILURE: Schema or registry changes are prohibited in v1.0.x"
+              echo "This PR cannot be merged without governance override."
+              exit 1
+            else
+              echo ""
+              echo "⚠️ SOFT WARNING: Manual review required"
+              echo "CODEOWNER must verify changes are permitted."
+            fi
+          else
+            echo "✅ PASS: No v1.0.x policy violations detected"
+            echo ""
+            echo "All changes appear to be permitted under v1.0.x policy:"
+            echo "  - No schema modifications"
+            echo "  - No registry modifications"
+            echo "  - No prohibited semantic changes"
+          fi
+      
+      - name: Check for corpus-only additions
+        if: steps.version.outputs.is_v1_0_x == 'true'
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          
+          # Check if corpus files were modified (not added)
+          MODIFIED_CORPUS=$(git diff --name-status origin/${{ github.base_ref }}...HEAD | grep -E "^M.*tests/corpus/(valid|invalid)/.*\.json$" || true)
+          
+          if [ -n "$MODIFIED_CORPUS" ]; then
+            echo "⚠️ WARNING: Existing corpus files modified"
+            echo "Files:"
+            echo "$MODIFIED_CORPUS"
+            echo ""
+            echo "Corpus modifications require:"
+            echo "  - Justification in PR description"
+            echo "  - 1+ external reviewer approval"
+            echo "  - Verification that change is valid"
+          else
+            # Check for additions
+            ADDED_CORPUS=$(git diff --name-status origin/${{ github.base_ref }}...HEAD | grep -E "^A.*tests/corpus/(valid|invalid)/.*\.json$" || true)
+            
+            if [ -n "$ADDED_CORPUS" ]; then
+              echo "✅ Corpus additions detected (permitted in v1.0.x)"
+              echo "Files:"
+              echo "$ADDED_CORPUS"
+            fi
+          fi
+      
+      - name: Summary
+        run: |
+          echo "📋 Version Policy Check Summary"
+          echo "==============================="
+          echo "Version: ${{ steps.version.outputs.version }}"
+          echo "v1.0.x: ${{ steps.version.outputs.is_v1_0_x }}"
+          echo ""
+          if [ "${{ steps.version.outputs.is_v1_0_x }}" == "true" ]; then
+            echo "Policy: Frozen specification (v1.0.x)"
+            echo "Enforcement: Active"
+          else
+            echo "Policy: Standard governance rules apply"
+            echo "Enforcement: Change class based"
+          fi
