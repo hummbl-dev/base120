@@ -49,7 +49,7 @@ The repository has made **significant progress** since the comprehensive audit d
 | **FM Mapping** | ✅ OPERATIONAL | 37 subclass codes mapped |
 | **Error Resolution** | ✅ OPERATIONAL | 3 error codes, FM30 dominance working |
 | **Test Suite** | ✅ OPERATIONAL | 13/13 passing (100% success rate) |
-| **CI Pipeline** | ✅ OPERATIONAL | GitHub Actions, Python 3.13 |
+| **CI Pipeline** | ✅ OPERATIONAL | GitHub Actions, Python 3.13 (CI), 3.12+ (runtime) |
 | **Observability** | ✅ OPERATIONAL | Optional event emission, backward compatible |
 
 ### B. Current Deployment State
@@ -317,7 +317,7 @@ The observability layer provides structured event emission for production deploy
 **Triggers:** Push to main, PR to main, manual dispatch  
 **Jobs:**
 1. **mirror-guard** - Enforces corpus compliance (placeholder)
-2. **test** - Runs pytest on Python 3.13
+2. **test** - Runs pytest on Python 3.13 (CI configured for 3.13, supports 3.12+)
 
 **Status:** ✅ FUNCTIONAL  
 **Execution Time:** <1 minute  
