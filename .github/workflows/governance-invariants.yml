@@ -202,7 +202,7 @@ jobs:
           python3 << 'PYTHON_SCRIPT'
           import json
           import sys
-          from base120.validators.validate import validate
+          from base120.validators.validate import validate_artifact
           
           # Load schemas and registries
           with open("schemas/v1.0.0/artifact.schema.json") as f:
@@ -221,7 +221,7 @@ jobs:
               "models": []
           }
           
-          errors = validate(test_artifact, schema, mappings, err_registry)
+          errors = validate_artifact(test_artifact, schema, mappings, err_registry)
           
           # Verify only FM30-tagged errors are emitted
           fm30_errors = {"ERR-GOV-004"}  # Known FM30 error
