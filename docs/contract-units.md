@@ -2,12 +2,24 @@
 
 ## Overview
 
-Contract units are the core governance artifacts in Base120. They encapsulate:
-- **Schemas**: JSON Schema definitions for artifacts
-- **Failure Graphs**: Failure mode nodes with retry, escalation, and termination rules
-- **Metadata**: Version information and environment compatibility
+Contract units are the **core governance artifacts** in Base120. They serve as **executable specifications** that define:
 
-Contract units provide design-time decision surfaces and enable validation in CI/CD pipelines.
+- **Schemas**: JSON Schema definitions for artifacts (MUST validate artifact structure)
+- **Failure Graphs**: Failure mode nodes with retry, escalation, and termination rules (MUST ensure reachable termination)
+- **Metadata**: Version information and environment compatibility (MUST include timestamps and environment declarations)
+
+Contract units provide design-time decision surfaces and enable deterministic validation in CI/CD pipelines.
+
+### Relationship to Base120 Global Model
+
+Contract units **govern** how systems implement and validate against the Base120 mental model framework:
+
+- **Domains**: Contract units specify which Base120 domains (e.g., "core", "governance") their artifacts belong to
+- **Classes**: The `artifact_schema` defines valid class identifiers that map to Base120 model categories
+- **Instances**: Each validated artifact represents a concrete instance within a class
+- **Drift Detection**: Contracts provide hooks for detecting when system behavior diverges from model expectations through failure mode tracking
+
+Contract units are **independent governance artifacts** but MUST align with Base120 semantic conventions when referencing domains, classes, and failure modes.
 
 ---
 
@@ -52,26 +64,46 @@ base120 validate-contract examples/contracts/valid-basic-contract.json -o report
 
 ### Required Fields
 
-All contract units must include:
+All contract units **MUST** include the following fields:
 
-1. **`contract_version`** (string): Version of the contract unit specification (e.g., `"v1.0.0"`)
+1. **`contract_version`** (string, REQUIRED): Version of the contract unit specification
+   - Format: `"v{major}.{minor}.{patch}"` (e.g., `"v1.0.0"`)
+   - MUST follow semantic versioning
 
-2. **`service_name`** (string): Name of the service this contract governs
+2. **`service_name`** (string, REQUIRED): Unique name of the service this contract governs
+   - MUST be non-empty
+   - SHOULD be descriptive and globally unique within your organization
 
-3. **`artifact_schema`** (object): JSON Schema for artifacts validated by this contract
-   - Must include `$schema` and `type` fields
-   - Defines the structure of artifacts this contract validates
+3. **`artifact_schema`** (object, REQUIRED): JSON Schema for artifacts validated by this contract
+   - MUST include `$schema` field (specifies JSON Schema version)
+   - MUST include `type` field (typically `"object"`)
+   - SHOULD define properties for `domain`, `class`, and `instance` when integrating with Base120 model
+   - Defines the structure and constraints for artifacts this contract validates
 
-4. **`failure_graph`** (object): Failure mode graph with retry, escalation, and termination rules
-   - **`nodes`** (array): Failure mode nodes in the graph
-   - **`edges`** (array): Edges between nodes (escalation paths)
+4. **`failure_graph`** (object, REQUIRED): Failure mode graph with retry, escalation, and termination rules
+   - **`nodes`** (array, REQUIRED): Failure mode nodes in the graph (MUST be non-empty)
+   - **`edges`** (array, REQUIRED): Edges between nodes defining escalation paths
+   - MUST contain at least one termination node
+   - MUST NOT contain cycles (acyclic graph requirement)
 
-5. **`metadata`** (object): Contract metadata
-   - **`created`** (string): ISO 8601 timestamp
-   - **`updated`** (string): ISO 8601 timestamp
-   - **`compatibility`** (object): Environment compatibility information
-     - **`environments`** (array): List of validated environments (non-empty)
-     - **`minimum_version`** (string, optional): Minimum contract version required
+5. **`metadata`** (object, REQUIRED): Contract metadata for governance and versioning
+   - **`created`** (string, REQUIRED): ISO 8601 timestamp of contract creation
+   - **`updated`** (string, REQUIRED): ISO 8601 timestamp of last update
+     - MUST be greater than or equal to `created`
+   - **`compatibility`** (object, REQUIRED): Environment compatibility information
+     - **`environments`** (array, REQUIRED): List of validated environments (MUST be non-empty)
+     - **`minimum_version`** (string, OPTIONAL): Minimum contract version required
+   - **`description`** (string, RECOMMENDED): Human-readable description of contract purpose
+   - **`tags`** (array, RECOMMENDED): Tags for categorization and discoverability
+
+### Normative Language
+
+This specification uses RFC 2119 keywords:
+- **MUST**: Absolute requirement (validation fails if not met)
+- **MUST NOT**: Absolute prohibition (validation fails if violated)
+- **SHOULD**: Strong recommendation (may trigger warnings if not followed)
+- **RECOMMENDED**: Suggested best practice (may trigger warnings if not followed)
+- **MAY**: Optional (no validation impact)
 
 ---
 
@@ -115,13 +147,27 @@ Edges define escalation paths between failure modes:
 
 ### Semantic Rules
 
-The validator enforces these semantic rules:
+The validator **MUST** enforce these semantic rules:
 
-1. **Node Uniqueness**: All node IDs must be unique
-2. **Valid References**: Edge `from` and `to` fields must reference existing nodes
-3. **Termination Constraint**: Nodes with `action: "terminate"` cannot have outgoing edges
-4. **Retry Limits**: `max_retries` must be between 0 and 10
-5. **Termination Requirement**: At least one node must have `action: "terminate"`
+1. **Node Uniqueness**: All node IDs MUST be unique within a failure graph
+2. **Valid References**: Edge `from` and `to` fields MUST reference existing nodes
+3. **Termination Constraint**: Nodes with `action: "terminate"` MUST NOT have outgoing edges
+4. **Retry Limits**: `max_retries` MUST be between 0 and 10 (inclusive)
+5. **Termination Requirement**: At least one node MUST have `action: "terminate"`
+6. **Acyclic Requirement**: The failure graph MUST NOT contain cycles (ensures guaranteed termination)
+7. **Datetime Validity**: `created` and `updated` timestamps MUST be valid ISO 8601 format
+8. **Temporal Consistency**: `created` timestamp MUST be less than or equal to `updated` timestamp
+
+### Semantic Warnings
+
+The validator **SHOULD** emit warnings (non-blocking) for governance smells:
+
+1. **Missing Description**: Metadata lacks a `description` field
+2. **Missing Tags**: Metadata lacks a `tags` field or has an empty tags array
+3. **Single Environment**: Contract only declares support for one environment
+4. **Unconstrained Models**: Artifact schema's `models` field lacks proper validation constraints
+
+Warnings indicate potential governance issues but do NOT block validation.
 
 ---
 
@@ -241,6 +287,38 @@ Edge 0: 'to' node 'FM99' does not exist
 Failure graph must contain at least one termination node
 ```
 
+**Error: Cycle Detected**
+```
+Failure graph contains a cycle: FM1 -> FM2 -> FM1
+```
+
+**Error: Invalid Datetime Format**
+```
+Metadata: 'created' field has invalid datetime format: invalid-date
+```
+
+### Common Validation Warnings
+
+**Warning: Missing Description**
+```
+Metadata: 'description' field is recommended but missing
+```
+
+**Warning: Missing Tags**
+```
+Metadata: 'tags' field is missing or empty (recommended for discoverability)
+```
+
+**Warning: Single Environment**
+```
+Compatibility: Contract only supports a single environment (production). Consider multi-environment support.
+```
+
+**Warning: Unconstrained Models**
+```
+Artifact schema: 'models' items have no constraints (consider defining model validation rules)
+```
+
 ---
 
 ## Integration with CI/CD
@@ -299,14 +377,40 @@ All extensions will maintain backward compatibility within the v1.x series.
 
 **Contracts as Governance Artifacts**
 
-Contract units embody the principle that **contracts govern runtime behavior**:
+Contract units embody the principle that **contracts govern runtime behavior** through explicit, enforceable specifications:
+
+### Lifecycle Phases
 
 1. **Design Time**: Define schemas, failure modes, and policies in contract units
-2. **Validation Time**: Use CLI to validate contracts during development
-3. **Deployment Time**: Bind code and infrastructure to contract constraints
-4. **Runtime**: System behavior conforms to contract specifications
+   - Specify Base120 domain alignment (e.g., "core", "governance")
+   - Define artifact class identifiers and validation rules
+   - Establish failure escalation paths
 
-This model ensures that governance decisions are explicit, auditable, and enforceable.
+2. **Validation Time**: Use CLI to validate contracts during development
+   - Enforce structural correctness (schema validation)
+   - Verify semantic rules (cycles, termination, consistency)
+   - Surface governance smells through warnings
+
+3. **Deployment Time**: Bind code and infrastructure to contract constraints
+   - Contracts become executable specifications
+   - Systems MUST align with contract-defined failure graphs
+   - Environment compatibility declarations guide deployment
+
+4. **Runtime**: System behavior conforms to contract specifications
+   - Failure modes trigger according to graph definitions
+   - Retry and escalation follow contract rules
+   - Drift detection compares actual behavior against contract expectations
+
+### Base120 Model Integration
+
+Contract units integrate with the Base120 mental model framework through:
+
+- **Domain Alignment**: Artifacts reference Base120 domains in their schemas
+- **Class Mapping**: Contract schemas define which Base120 classes apply
+- **Instance Validation**: Each artifact validated is an instance within a class
+- **Failure Mode Coverage**: Contracts map system failures to Base120 FM taxonomy
+
+This model ensures that governance decisions are **explicit**, **auditable**, **deterministic**, and **enforceable**.
 
 ---
 
@@ -314,9 +418,12 @@ This model ensures that governance decisions are explicit, auditable, and enforc
 
 Contract unit validation is part of Base120 v1.0.x and follows the governance model:
 
-- ✅ Schema is frozen (semantic changes require major version)
-- ✅ Validation rules are deterministic
-- ✅ Reports are machine-readable
-- ✅ Backward compatibility guaranteed within v1.x
+- ✅ **Schema is frozen**: Semantic changes require major version increment
+- ✅ **Validation rules are deterministic**: Same input always produces same output
+- ✅ **Reports are machine-readable**: JSON format enables automation
+- ✅ **Backward compatibility guaranteed**: Within v1.x series
+- ✅ **Cycle detection enforced**: Guarantees reachable termination
+- ✅ **Datetime validation**: Robust ISO 8601 parsing with timezone support
+- ✅ **Semantic warnings**: Non-blocking governance smell detection
 
 For questions or issues, see the [Base120 repository](https://github.com/hummbl-dev/base120).
