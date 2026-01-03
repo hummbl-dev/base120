@@ -1,7 +1,39 @@
 """Contract unit validation logic for Base120."""
 from typing import Any, Mapping, Sequence
-import jsonschema
 from jsonschema.validators import Draft202012Validator
+
+
+def _compare_semver(version1: str, version2: str) -> int:
+    """
+    Compare two semantic versions.
+    
+    Returns:
+        -1 if version1 < version2
+        0 if version1 == version2
+        1 if version1 > version2
+    """
+    # Remove 'v' prefix if present
+    v1 = version1.lstrip('v')
+    v2 = version2.lstrip('v')
+    
+    # Split into parts and convert to integers
+    parts1 = [int(x) for x in v1.split('.')]
+    parts2 = [int(x) for x in v2.split('.')]
+    
+    # Pad with zeros if needed
+    while len(parts1) < len(parts2):
+        parts1.append(0)
+    while len(parts2) < len(parts1):
+        parts2.append(0)
+    
+    # Compare parts
+    for p1, p2 in zip(parts1, parts2):
+        if p1 < p2:
+            return -1
+        elif p1 > p2:
+            return 1
+    
+    return 0
 
 
 def validate_contract_schema(
@@ -135,9 +167,8 @@ def validate_metadata_consistency(
     
     minimum_version = compatibility.get("minimum_version")
     if minimum_version:
-        # Check that contract_version >= minimum_version
-        # Simple string comparison works for semantic versions
-        if contract_version < minimum_version:
+        # Check that contract_version >= minimum_version using proper semver comparison
+        if _compare_semver(contract_version, minimum_version) < 0:
             errors.append(
                 f"Metadata: contract_version ({contract_version}) is less "
                 f"than minimum_version ({minimum_version})"
@@ -185,13 +216,6 @@ def validate_contract(
     # Example: Missing optional description
     if not metadata.get("description"):
         warnings.append("Metadata: 'description' field is recommended but missing")
-    
-    # Check artifact schema has proper structure
-    artifact_schema = contract.get("artifact_schema", {})
-    if "required" not in artifact_schema:
-        warnings.append(
-            "Artifact schema: 'required' field is recommended but missing"
-        )
     
     is_valid = len(errors) == 0
     return is_valid, errors, warnings

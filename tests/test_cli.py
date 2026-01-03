@@ -2,16 +2,17 @@
 import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 EXAMPLES_PATH = ROOT / "examples" / "contracts"
 
 
-def test_cli_validate_valid_contract():
+def test_cli_validate_valid_contract(tmp_path):
     """Test CLI with a valid contract."""
     contract_path = EXAMPLES_PATH / "valid-basic-contract.json"
-    output_path = "/tmp/test_valid_report.json"
+    output_path = tmp_path / "test_valid_report.json"
     
     result = subprocess.run(
         [sys.executable, "-m", "base120.cli", "validate-contract", 
@@ -33,10 +34,10 @@ def test_cli_validate_valid_contract():
     assert "validated_environments" in report["compatibility"]
 
 
-def test_cli_validate_invalid_contract():
+def test_cli_validate_invalid_contract(tmp_path):
     """Test CLI with an invalid contract (termination edge)."""
     contract_path = EXAMPLES_PATH / "invalid-termination-edge.json"
-    output_path = "/tmp/test_invalid_report.json"
+    output_path = tmp_path / "test_invalid_report.json"
     
     result = subprocess.run(
         [sys.executable, "-m", "base120.cli", "validate-contract",
@@ -57,10 +58,10 @@ def test_cli_validate_invalid_contract():
     assert len(report["errors"]) > 0
 
 
-def test_cli_validate_missing_metadata():
+def test_cli_validate_missing_metadata(tmp_path):
     """Test CLI with a contract missing required metadata."""
     contract_path = EXAMPLES_PATH / "invalid-missing-metadata.json"
-    output_path = "/tmp/test_missing_metadata_report.json"
+    output_path = tmp_path / "test_missing_metadata_report.json"
     
     result = subprocess.run(
         [sys.executable, "-m", "base120.cli", "validate-contract",
@@ -94,10 +95,10 @@ def test_cli_file_not_found():
     assert "not found" in result.stderr.lower()
 
 
-def test_cli_invalid_json():
+def test_cli_invalid_json(tmp_path):
     """Test CLI with malformed JSON."""
     # Create a temp file with invalid JSON
-    temp_file = Path("/tmp/invalid.json")
+    temp_file = tmp_path / "invalid.json"
     temp_file.write_text("{ invalid json }")
     
     result = subprocess.run(
@@ -109,9 +110,6 @@ def test_cli_invalid_json():
     
     assert result.returncode == 3, "Expected invalid-json exit code"
     assert "invalid json" in result.stderr.lower()
-    
-    # Clean up
-    temp_file.unlink()
 
 
 def test_cli_default_output_path():

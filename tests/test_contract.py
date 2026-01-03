@@ -6,7 +6,8 @@ from base120.contract.validate import (
     validate_contract_schema,
     validate_failure_graph,
     validate_metadata_consistency,
-    validate_contract
+    validate_contract,
+    _compare_semver
 )
 
 ROOT = Path(__file__).parent.parent
@@ -15,6 +16,30 @@ EXAMPLES_PATH = ROOT / "examples" / "contracts"
 
 with open(SCHEMA_PATH) as f:
     CONTRACT_SCHEMA = json.load(f)
+
+
+def test_semver_comparison():
+    """Test semantic version comparison."""
+    # Equal versions
+    assert _compare_semver("v1.0.0", "v1.0.0") == 0
+    assert _compare_semver("v2.5.3", "v2.5.3") == 0
+    
+    # Less than
+    assert _compare_semver("v1.0.0", "v2.0.0") < 0
+    assert _compare_semver("v1.0.0", "v1.1.0") < 0
+    assert _compare_semver("v1.0.0", "v1.0.1") < 0
+    assert _compare_semver("v1.9.9", "v2.0.0") < 0
+    assert _compare_semver("v1.9.9", "v10.0.0") < 0
+    
+    # Greater than
+    assert _compare_semver("v2.0.0", "v1.0.0") > 0
+    assert _compare_semver("v1.1.0", "v1.0.0") > 0
+    assert _compare_semver("v1.0.1", "v1.0.0") > 0
+    assert _compare_semver("v10.0.0", "v2.0.0") > 0
+    
+    # Without 'v' prefix
+    assert _compare_semver("1.0.0", "2.0.0") < 0
+    assert _compare_semver("2.0.0", "1.0.0") > 0
 
 
 def test_valid_contract_passes():
