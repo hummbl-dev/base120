@@ -104,3 +104,39 @@ errors = validate_artifact(artifact, schema, mappings, err_registry)
 
 This observability layer addresses **FM19 (Observability Failure)** from the 
 Base120 governance framework and is production-ready for deployment monitoring.
+
+---
+
+## Governance & Contributing
+
+Base120 implements a **formal governance contract** with automated CI enforcement to ensure:
+
+- **Deterministic validation** across all implementations
+- **Mathematical rigor** in formal model changes  
+- **Audit trails** for substantive changes
+- **Version policy enforcement** (v1.0.x is a frozen specification)
+
+### Quick Links
+
+- **[GOVERNANCE.md](GOVERNANCE.md)** - Complete governance specification
+- **[Contributing Guide](docs/governance-migration.md)** - How to submit changes
+- **[Decision Tree](docs/governance-decision-tree.md)** - Quick classification reference
+
+### Change Classes
+
+| If you're changing... | Class | Review |
+|-----------------------|-------|--------|
+| Typos, formatting | Trivial | CODEOWNER only |
+| Documentation | Editorial | CODEOWNER only |
+| Test corpus | Corpus | CODEOWNER + tests |
+| Schemas | Schema | 1+ reviewers |
+| Formal models | FM | 2+ reviewers |
+
+See [governance-decision-tree.md](docs/governance-decision-tree.md) for complete classification guide.
+
+### v1.0.x Policy
+
+**Permitted:** Security fixes, CI hardening, documentation, corpus additions  
+**Prohibited:** Schema changes, registry modifications, breaking changes
+
+All changes are automatically classified and validated by CI workflows.
