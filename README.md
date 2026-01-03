@@ -12,6 +12,18 @@ All other language implementations are semantics mirrors and MUST conform
 exactly
 to the outputs defined here.
 
+## Contract Unit CLI
+
+Base120 now includes a command-line interface for validating **contract units** - governance artifacts that encapsulate schemas, failure graphs, and version metadata.
+
+**Quick Start:**
+```bash
+pip install base120
+base120 validate-contract path/to/contract.json
+```
+
+See [`docs/contract-units.md`](docs/contract-units.md) for complete documentation and examples.
+
 ## Canonical Authority
 
 This repository is the authoritative, executable reference for Base120 v1.x.
