@@ -1,0 +1,15 @@
+{
+  "artifact": "artifacts/base120.v1.0.0.seed.json",
+  "claims": [
+    "Canonical Base120 v1.0.0 mental model seed"
+  ],
+  "governance_version": "base120.v1.0.0",
+  "mrcc_version": "1.0",
+  "non_claims": [
+    "Does not validate semantic correctness of individual models",
+    "Does not assert fitness for downstream applications"
+  ],
+  "schema_version": "base120.schema.v1",
+  "sealed_at": "2026-01-03T16:15:51.305232+00:00",
+  "sha256": "74c51092b218dcf7b430569fffb36a23ae42aa07f7f1b900479b1721e585656d"
+}
