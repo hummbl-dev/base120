@@ -4,7 +4,7 @@ from datetime import datetime
 from jsonschema.validators import Draft202012Validator
 
 
-def _parse_datetime(datetime_str: str) -> Optional[datetime]:
+def _parse_datetime(datetime_str: Optional[str]) -> Optional[datetime]:
     """
     Parse ISO 8601 datetime string with robust handling of edge cases.
     
@@ -14,10 +14,16 @@ def _parse_datetime(datetime_str: str) -> Optional[datetime]:
     - ISO 8601 without timezone (e.g., "2026-01-03T17:00:00")
     - Fractional seconds (e.g., "2026-01-03T17:00:00.123456Z")
     
+    Args:
+        datetime_str: ISO 8601 datetime string or None
+    
     Returns:
-        Parsed datetime object or None if parsing fails
+        Parsed datetime object or None if parsing fails or input is None/empty
     """
-    if not datetime_str:
+    if datetime_str is None or not datetime_str:
+        return None
+    
+    if not isinstance(datetime_str, str):
         return None
     
     # List of datetime formats to try, in order of specificity
@@ -33,7 +39,7 @@ def _parse_datetime(datetime_str: str) -> Optional[datetime]:
     for fmt in formats:
         try:
             return datetime.strptime(datetime_str, fmt)
-        except ValueError:
+        except (ValueError, TypeError):
             continue
     
     return None
@@ -361,17 +367,10 @@ def validate_contract(
     # Check if models schema exists but is very permissive or empty
     if "models" in schema_props:
         models_type = models_schema.get("type")
-        models_items = models_schema.get("items", {})
+        models_items = models_schema.get("items")
         
-        # Warn if models array has no item constraints
-        if models_type == "array" and not models_items:
-            warnings.append(
-                "Artifact schema: 'models' array has no item constraints "
-                "(consider defining model structure)"
-            )
-        
-        # Warn if models items are completely unconstrained
-        if models_type == "array" and models_items == {}:
+        # Warn if models array has no item constraints or empty constraints
+        if models_type == "array" and (not models_items or models_items == {}):
             warnings.append(
                 "Artifact schema: 'models' items have no constraints "
                 "(consider defining model validation rules)"

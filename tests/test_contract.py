@@ -208,7 +208,13 @@ def test_retry_limits_bounds():
 
 
 def test_datetime_parsing_various_formats():
-    """Test robust datetime parsing with various ISO 8601 formats."""
+    """
+    Test robust datetime parsing with various ISO 8601 formats.
+    
+    Note: This test directly imports the private _parse_datetime function
+    because datetime parsing is a critical utility with complex edge cases
+    that warrant focused unit testing beyond just the public API.
+    """
     from base120.contract.validate import _parse_datetime
     
     # Valid formats
@@ -218,7 +224,7 @@ def test_datetime_parsing_various_formats():
     assert _parse_datetime("2026-01-03T17:00:00.123456Z") is not None
     assert _parse_datetime("2026-01-03T17:00:00.123456+00:00") is not None
     
-    # Invalid formats
+    # Invalid formats and edge cases
     assert _parse_datetime("") is None
     assert _parse_datetime("invalid") is None
     assert _parse_datetime("2026-01-03") is None
