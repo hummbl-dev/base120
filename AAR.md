@@ -102,8 +102,8 @@ This AAR covers:
 **Details:**
 - MIT License chosen (enables broad usage and mirrors)
 - Copyright: 2026 HUMMBL
-- Standard MIT terms included
-- **Issue:** Duplicate text at end of file (minor formatting problem)
+- Standard MIT terms included (lines 1-21)
+- **Issue:** Duplicate text at end of file - lines 22-24 should be removed (minor formatting problem)
 
 **Impact:** HIGH
 - ✅ Legal blocker removed (FM25 resolved)
@@ -180,7 +180,7 @@ This AAR covers:
 - Used `typing.Mapping` and `typing.Sequence` for immutability contracts
 - Proper `Optional` usage for event_sink parameter
 
-**Example:**
+**Example (Python 3.12+):**
 ```python
 def validate_artifact(
     artifact: Mapping[str, Any],
@@ -332,7 +332,7 @@ Type hints added systematically across all modules:
 - Consistent patterns across modules
 
 **Why It Worked:**
-- Python 3.13+ modern syntax adoption
+- Python 3.12+ modern syntax adoption
 - Clear contracts for all public APIs
 - Proper use of abstract types (Mapping, Sequence)
 - No runtime overhead (type hints are metadata)
@@ -469,8 +469,11 @@ Every observability guarantee validated:
 
 **Status:**
 ```
-Lines 1-21: Standard MIT License
-Lines 22-24: Duplicate copyright + license stub
+Lines 1-21: Standard MIT License (complete and valid)
+Lines 22-24: Duplicate header that should be removed:
+  Line 22: "# MIT License"
+  Line 23: (blank line)
+  Line 24: "Copyright (c) 2026 HUMMBL"
 ```
 
 **Impact:** LOW (cosmetic issue, legally valid)

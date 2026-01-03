@@ -55,7 +55,7 @@ The repository has made **significant progress** since the comprehensive audit d
 ### B. Current Deployment State
 
 **Version:** v1.0.0 (semantic freeze active)  
-**Python Support:** 3.13+ (type hints using modern syntax)  
+**Python Support:** 3.12+ (type hints using modern syntax)  
 **Dependencies:** 
 - Runtime: `jsonschema>=4.0` (single dependency)
 - Testing: `pytest` (optional)
@@ -130,7 +130,7 @@ def validate_artifact(
 **Status:** ✅ Complete type coverage
 - `typing.Mapping`, `typing.Sequence` used for immutability contracts
 - `Optional` properly used for event_sink
-- Modern Python 3.13 syntax (`list[str]`, `dict[str, Any]`)
+- Modern Python 3.12+ syntax (`list[str]`, `dict[str, Any]`)
 
 **Validation:** ⚠️ No mypy in CI yet (recommended addition)
 

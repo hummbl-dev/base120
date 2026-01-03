@@ -210,7 +210,7 @@ This directory contains comprehensive audit documentation for the Base120 reposi
 | **Type Coverage** | 0% | 100% | +100% |
 | **Observability** | None | Full | ✅ Added |
 | **Corpus Size** | 4 | 4 | 0 (⚠️) |
-| **Empty Docs** | ~0 | 3 | -3 (⚠️) |
+| **Empty Docs** | 3+ | 3 | 0 (⚠️) |
 | **Production Ready** | No | Yes | ✅ |
 
 ---
