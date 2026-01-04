@@ -5,6 +5,8 @@ Verifies event emission contract for validator runs.
 """
 
 import json
+import os
+import time
 from pathlib import Path
 from io import StringIO
 from typing import Any, Mapping
@@ -265,8 +267,6 @@ def test_corpus_invalid_schema_with_observability():
 
 def test_deterministic_timestamp_via_env_var():
     """When BASE120_FIXED_TIMESTAMP is set, events use that timestamp."""
-    import os
-    
     # Save original env state
     original_timestamp = os.environ.get("BASE120_FIXED_TIMESTAMP")
     
@@ -284,7 +284,6 @@ def test_deterministic_timestamp_via_env_var():
             failure_mode_ids=[]
         )
         
-        import time
         time.sleep(0.01)  # Small delay to ensure different microseconds
         
         event2 = create_validator_event(
@@ -310,8 +309,6 @@ def test_deterministic_timestamp_via_env_var():
 
 def test_dynamic_timestamp_without_env_var():
     """Without BASE120_FIXED_TIMESTAMP, events use dynamic timestamps."""
-    import os
-    
     # Ensure env var is not set
     original_timestamp = os.environ.pop("BASE120_FIXED_TIMESTAMP", None)
     
@@ -325,7 +322,6 @@ def test_dynamic_timestamp_without_env_var():
             failure_mode_ids=[]
         )
         
-        import time
         time.sleep(0.01)  # Small delay to ensure different timestamps
         
         event2 = create_validator_event(

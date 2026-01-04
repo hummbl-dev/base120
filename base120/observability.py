@@ -8,6 +8,7 @@ Uses standard library only - no runtime dependencies.
 from typing import Any, Callable, Iterable, Mapping, Optional, TextIO, cast
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 
@@ -66,7 +67,6 @@ def create_validator_event(
         Dict conforming to validator_result event schema
     """
     # Use fixed timestamp for deterministic testing
-    import os
     if "BASE120_FIXED_TIMESTAMP" in os.environ:
         timestamp = os.environ["BASE120_FIXED_TIMESTAMP"]
     else:
