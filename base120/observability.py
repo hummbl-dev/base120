@@ -8,6 +8,7 @@ Uses standard library only - no runtime dependencies.
 from typing import Any, Callable, Iterable, Mapping, Optional, TextIO, cast
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 
@@ -65,6 +66,12 @@ def create_validator_event(
     Returns:
         Dict conforming to validator_result event schema
     """
+    # Use fixed timestamp for deterministic testing
+    if "BASE120_FIXED_TIMESTAMP" in os.environ:
+        timestamp = os.environ["BASE120_FIXED_TIMESTAMP"]
+    else:
+        timestamp = datetime.now(timezone.utc).isoformat()
+    
     event: dict[str, Any] = {
         "event_type": "validator_result",
         "artifact_id": artifact_id,
@@ -72,7 +79,7 @@ def create_validator_event(
         "result": result,
         "error_codes": list(error_codes),
         "failure_mode_ids": sorted(failure_mode_ids),  # Ensure sorted for consistency
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": timestamp
     }
     
     if correlation_id is not None:

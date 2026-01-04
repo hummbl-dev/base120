@@ -320,6 +320,34 @@ The observability layer is validated by tests in `tests/test_observability.py`:
 - ✅ FM30 dominance reflected in failure_mode_ids
 - ✅ Event emission errors do not propagate
 - ✅ Omitting event_sink preserves original behavior
+- 
+### Deterministic Timestamp Testing
+
+For tests that require deterministic behavior (e.g., Golden Corpus validation, hash verification), the observability layer supports a fixed timestamp mode via the `BASE120_FIXED_TIMESTAMP` environment variable:
+
+```bash
+# Set a fixed timestamp for deterministic observability events
+export BASE120_FIXED_TIMESTAMP="2026-01-01T00:00:00.000000Z"
+
+# Run tests - all observability events will use this timestamp
+pytest tests/test_corpus.py
+```
+
+**Use Cases:**
+
+- ✅ **CI Determinism Checks**: Ensure identical outputs across multiple test runs (e.g., `.github/workflows/governance-invariants.yml`)
+- - ✅ **Hash Verification**: Validate that corpus outputs produce consistent hashes when timestamps are fixed
+  - - ✅ **Regression Testing**: Compare observability outputs across versions without timestamp drift
+    - - ✅ **Local Development**: Reproduce CI test conditions locally for debugging
+     
+      - **Behavior:**
+     
+      - - When `BASE120_FIXED_TIMESTAMP` is set, all observability events use this timestamp instead of the current time
+        - - When unset (default), observability events use dynamic timestamps (`datetime.now(timezone.utc)`)
+          - - Production code is **unaffected** - only timestamp emission changes, validation semantics remain identical
+            - - Tests verify both fixed and dynamic timestamp behavior (`test_deterministic_timestamp_via_env_var()`, `test_dynamic_timestamp_without_env_var()`)
+             
+              - This pattern enables governance-enforced determinism checks (Invariant 1: Golden Corpus Determinism) while preserving the opt-in, backward-compatible observability design.
 
 ---
 

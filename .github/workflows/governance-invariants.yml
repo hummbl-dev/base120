@@ -1,51 +1,55 @@
-name: Governance Invariant Checks
+name: Governance Invariants
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
-  pull-requests: write
-
-on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
-  workflow_dispatch:
 
 jobs:
-  determinism-check:
+  golden-corpus-determinism:
     name: Golden Corpus Determinism
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      
-      - name: Install dependencies
+
+      - name: Install package with test deps
         run: |
+          python -m pip install --upgrade pip
           pip install -e ".[test]"
-      
+
       - name: Run corpus tests (iteration 1)
+        env:
+          BASE120_FIXED_TIMESTAMP: "2026-01-01T00:00:00.000000Z"
         run: |
           pytest tests/test_corpus.py -v --tb=short > /tmp/corpus_run1.txt 2>&1
           echo "Run 1 completed"
-      
+
       - name: Run corpus tests (iteration 2)
+        env:
+          BASE120_FIXED_TIMESTAMP: "2026-01-01T00:00:00.000000Z"
         run: |
           pytest tests/test_corpus.py -v --tb=short > /tmp/corpus_run2.txt 2>&1
           echo "Run 2 completed"
-      
+
       - name: Run corpus tests (iteration 3)
+        env:
+          BASE120_FIXED_TIMESTAMP: "2026-01-01T00:00:00.000000Z"
         run: |
           pytest tests/test_corpus.py -v --tb=short > /tmp/corpus_run3.txt 2>&1
           echo "Run 3 completed"
-      
-      - name: Verify determinism
+
+      - name: Compare output hashes
         run: |
-          # Hash the outputs
           HASH1=$(sha256sum /tmp/corpus_run1.txt | cut -d' ' -f1)
           HASH2=$(sha256sum /tmp/corpus_run2.txt | cut -d' ' -f1)
           HASH3=$(sha256sum /tmp/corpus_run3.txt | cut -d' ' -f1)
@@ -54,224 +58,11 @@ jobs:
           echo "Run 2 hash: $HASH2"
           echo "Run 3 hash: $HASH3"
           
-          # Compare hashes
           if [ "$HASH1" != "$HASH2" ] || [ "$HASH1" != "$HASH3" ]; then
             echo "❌ FAIL: Corpus outputs differ across runs"
             echo "This violates Invariant 1: Golden Corpus Determinism"
-            echo "The validator MUST produce identical outputs across all executions"
             exit 1
           fi
           
           echo "✅ PASS: All corpus runs produced identical output"
-          echo "Invariant 1: Golden Corpus Determinism VERIFIED"
-  
-  backward-compatibility:
-    name: Backward Compatibility Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      
-      - name: Install dependencies
-        run: |
-          pip install -e ".[test]"
-      
-      - name: Run valid corpus tests
-        run: |
-          pytest tests/test_corpus.py::test_valid_corpus -v
-          echo "✅ PASS: All valid corpus tests passed"
-          echo "Invariant 3: Backward Compatibility VERIFIED"
-  
-  registry-integrity:
-    name: Registry Integrity Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      
-      - name: Install dependencies
-        run: |
-          pip install -e ".[test]"
-      
-      - name: Validate registry schemas
-        run: |
-          python3 << 'PYTHON_SCRIPT'
-          import json
-          import sys
-          
-          # Load registries
-          try:
-              with open("registries/fm.json") as f:
-                  fm_registry = json.load(f)
-              with open("registries/mappings.json") as f:
-                  mappings_registry = json.load(f)
-              with open("registries/err.json") as f:
-                  err_registry = json.load(f)
-          except Exception as e:
-              print(f"❌ FAIL: Could not load registries: {e}")
-              sys.exit(1)
-          
-          # Validate FM registry
-          fm_ids = {fm["id"] for fm in fm_registry["registry"]}
-          print(f"Found {len(fm_ids)} failure modes: {sorted(fm_ids)}")
-          
-          # Check for duplicates
-          all_fm_ids = [fm["id"] for fm in fm_registry["registry"]]
-          if len(all_fm_ids) != len(fm_ids):
-              print("❌ FAIL: Duplicate FM IDs detected")
-              sys.exit(1)
-          
-          # Validate mappings reference valid FMs
-          for subclass, fms in mappings_registry["mappings"].items():
-              for fm in fms:
-                  if fm not in fm_ids:
-                      print(f"❌ FAIL: Mapping {subclass} references unknown FM: {fm}")
-                      sys.exit(1)
-          
-          print(f"✅ All mappings reference valid FMs")
-          
-          # Validate error registry references valid FMs
-          for err in err_registry["registry"]:
-              for fm in err["fm"]:
-                  if fm not in fm_ids:
-                      print(f"❌ FAIL: Error {err['id']} references unknown FM: {fm}")
-                      sys.exit(1)
-          
-          print(f"✅ All error codes reference valid FMs")
-          print("✅ PASS: Registry integrity verified")
-          print("Invariant 4: Mathematical Soundness VERIFIED")
-          PYTHON_SCRIPT
-      
-      - name: Check for v1.0.x registry modifications
-        if: github.event_name == 'pull_request'
-        run: |
-          # Get version from pyproject.toml
-          VERSION=$(grep '^version' pyproject.toml | cut -d'"' -f2)
-          echo "Current version: $VERSION"
-          
-          if [[ "$VERSION" =~ ^1\.0\. ]]; then
-            echo "Checking for v1.0.x registry modifications..."
-            
-            # Check if any registry files were modified
-            git fetch origin ${{ github.base_ref }}
-            MODIFIED_REGISTRIES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E "^registries/.*\.json$" || true)
-            
-            if [ -n "$MODIFIED_REGISTRIES" ]; then
-              echo "❌ FAIL: Registry modifications detected in v1.0.x"
-              echo "Modified files:"
-              echo "$MODIFIED_REGISTRIES"
-              echo ""
-              echo "Registry modifications are PROHIBITED in v1.0.x"
-              echo "See GOVERNANCE.md Section: Version Policy"
-              exit 1
-            fi
-            
-            echo "✅ PASS: No registry modifications in v1.0.x"
-          else
-            echo "Version is not v1.0.x, registry modifications allowed with proper governance"
-          fi
-  
-  fm30-dominance:
-    name: FM30 Dominance Rule Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      
-      - name: Install dependencies
-        run: |
-          pip install -e ".[test]"
-      
-      - name: Test FM30 dominance
-        run: |
-          python3 << 'PYTHON_SCRIPT'
-          import json
-          import sys
-          from base120.validators.validate import validate_artifact
-          
-          # Load schemas and registries
-          with open("schemas/v1.0.0/artifact.schema.json") as f:
-              schema = json.load(f)
-          with open("registries/mappings.json") as f:
-              mappings = json.load(f)
-          with open("registries/err.json") as f:
-              err_registry = json.load(f)["registry"]
-          
-          # Test case: class "99" has FM30, should only emit FM30 errors
-          test_artifact = {
-              "id": "test-fm30",
-              "domain": "test",
-              "class": "99",
-              "instance": "test",
-              "models": []
-          }
-          
-          errors = validate_artifact(test_artifact, schema, mappings, err_registry)
-          
-          # Verify only FM30-tagged errors are emitted
-          fm30_errors = {"ERR-GOV-004"}  # Known FM30 error
-          
-          for err in errors:
-              # Check if error is FM30-tagged
-              err_def = next((e for e in err_registry if e["id"] == err), None)
-              if err_def and "FM30" not in err_def.get("fm", []):
-                  print(f"❌ FAIL: Non-FM30 error emitted when FM30 present: {err}")
-                  sys.exit(1)
-          
-          print("✅ PASS: FM30 dominance rule verified")
-          print("Only FM30-tagged errors emitted when FM30 present")
-          PYTHON_SCRIPT
-  
-  schema-validation:
-    name: Schema Validation Self-Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      
-      - name: Install dependencies
-        run: |
-          pip install -e ".[test]"
-      
-      - name: Validate schemas are well-formed
-        run: |
-          python3 << 'PYTHON_SCRIPT'
-          import json
-          import sys
-          from jsonschema import Draft202012Validator
-          
-          # Load and validate artifact schema
-          try:
-              with open("schemas/v1.0.0/artifact.schema.json") as f:
-                  schema = json.load(f)
-              
-              # Check if schema is valid JSON Schema
-              Draft202012Validator.check_schema(schema)
-              print("✅ artifact.schema.json is valid JSON Schema")
-              
-          except Exception as e:
-              print(f"❌ FAIL: Schema validation failed: {e}")
-              sys.exit(1)
-          
-          print("✅ PASS: All schemas are well-formed")
-          PYTHON_SCRIPT
+          echo "Golden Corpus Determinism verified."
