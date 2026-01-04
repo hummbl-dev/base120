@@ -463,11 +463,11 @@ This section maps all 30 Base120 Failure Modes to their mitigation status, disti
 **Total Failure Modes:** 30
 
 **By Status:**
-- ✅ MITIGATED IN-REPO: 11 FMs (37%)
+- ✅ MITIGATED IN-REPO: 13 FMs (43%)
   - FM2, FM3, FM5, FM8, FM9, FM13, FM14, FM15, FM19, FM22, FM24, FM25, FM30
-- ⚠️ PARTIALLY MITIGATED: 12 FMs (40%)
+- ⚠️ PARTIALLY MITIGATED: 11 FMs (37%)
   - FM1, FM6, FM7, FM10, FM16, FM18, FM20, FM23, FM26, FM28, FM29
-- 🔄 DELEGATED: 7 FMs (23%)
+- 🔄 DELEGATED: 6 FMs (20%)
   - FM4, FM11, FM12, FM17, FM21, FM27
 
 **Key Gaps Requiring Action:**
