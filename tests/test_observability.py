@@ -261,3 +261,91 @@ def test_corpus_invalid_schema_with_observability():
     assert event["result"] == "failure"
     assert event["error_codes"] == ["ERR-SCHEMA-001"]
     assert "FM15" in event["failure_mode_ids"]
+
+
+def test_deterministic_timestamp_via_env_var():
+    """When BASE120_FIXED_TIMESTAMP is set, events use that timestamp."""
+    import os
+    
+    # Save original env state
+    original_timestamp = os.environ.get("BASE120_FIXED_TIMESTAMP")
+    
+    try:
+        # Set fixed timestamp
+        fixed_ts = "2026-01-01T00:00:00.000000Z"
+        os.environ["BASE120_FIXED_TIMESTAMP"] = fixed_ts
+        
+        # Create two events at different times
+        event1 = create_validator_event(
+            artifact_id="test-001",
+            schema_version="v1.0.0",
+            result="success",
+            error_codes=[],
+            failure_mode_ids=[]
+        )
+        
+        import time
+        time.sleep(0.01)  # Small delay to ensure different microseconds
+        
+        event2 = create_validator_event(
+            artifact_id="test-002",
+            schema_version="v1.0.0",
+            result="success",
+            error_codes=[],
+            failure_mode_ids=[]
+        )
+        
+        # Both should have the fixed timestamp
+        assert event1["timestamp"] == fixed_ts
+        assert event2["timestamp"] == fixed_ts
+        assert event1["timestamp"] == event2["timestamp"]
+        
+    finally:
+        # Restore original env state
+        if original_timestamp is None:
+            os.environ.pop("BASE120_FIXED_TIMESTAMP", None)
+        else:
+            os.environ["BASE120_FIXED_TIMESTAMP"] = original_timestamp
+
+
+def test_dynamic_timestamp_without_env_var():
+    """Without BASE120_FIXED_TIMESTAMP, events use dynamic timestamps."""
+    import os
+    
+    # Ensure env var is not set
+    original_timestamp = os.environ.pop("BASE120_FIXED_TIMESTAMP", None)
+    
+    try:
+        # Create two events with a delay
+        event1 = create_validator_event(
+            artifact_id="test-001",
+            schema_version="v1.0.0",
+            result="success",
+            error_codes=[],
+            failure_mode_ids=[]
+        )
+        
+        import time
+        time.sleep(0.01)  # Small delay to ensure different timestamps
+        
+        event2 = create_validator_event(
+            artifact_id="test-002",
+            schema_version="v1.0.0",
+            result="success",
+            error_codes=[],
+            failure_mode_ids=[]
+        )
+        
+        # Timestamps should be in ISO format
+        assert "T" in event1["timestamp"]
+        assert "T" in event2["timestamp"]
+        
+        # Timestamps should be different (with high probability)
+        # Note: This could theoretically fail if events are created in same microsecond
+        # but the sleep makes this extremely unlikely
+        assert event1["timestamp"] != event2["timestamp"]
+        
+    finally:
+        # Restore original env state
+        if original_timestamp is not None:
+            os.environ["BASE120_FIXED_TIMESTAMP"] = original_timestamp
