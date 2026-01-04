@@ -205,9 +205,18 @@ jobs:
             # Load expected output
             EXPECTED=$(cat "$expected_file")
             
+            # Validate JSON before comparison
+            if ! echo "$OUTPUT" | jq -e '.' >/dev/null 2>&1; then
+              echo "❌ $basename - invalid JSON output"
+              echo "   Output: $OUTPUT"
+              FAIL_COUNT=$((FAIL_COUNT + 1))
+              FAILURES="${FAILURES}❌ $basename - invalid JSON output\n   Output: $OUTPUT\n\n"
+              continue
+            fi
+            
             # Compare outputs (normalize whitespace for comparison)
-            OUTPUT_NORMALIZED=$(echo "$OUTPUT" | jq -c '.' 2>/dev/null || echo "$OUTPUT")
-            EXPECTED_NORMALIZED=$(echo "$EXPECTED" | jq -c '.' 2>/dev/null || echo "$EXPECTED")
+            OUTPUT_NORMALIZED=$(echo "$OUTPUT" | jq -c '.')
+            EXPECTED_NORMALIZED=$(echo "$EXPECTED" | jq -c '.')
             
             if [ "$OUTPUT_NORMALIZED" = "$EXPECTED_NORMALIZED" ]; then
               echo "✅ $basename"
@@ -330,7 +339,14 @@ jobs:
           echo "Valid Corpus:   $VALID_PASS/$VALID_TOTAL passed"
           echo "Invalid Corpus: $INVALID_PASS/$INVALID_TOTAL passed"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Overall:        $TOTAL_PASS/$TOTAL passed ($((TOTAL_PASS * 100 / TOTAL))%)"
+          
+          # Calculate percentage safely (avoid division by zero)
+          if [ $TOTAL -gt 0 ]; then
+            PERCENTAGE=$((TOTAL_PASS * 100 / TOTAL))
+            echo "Overall:        $TOTAL_PASS/$TOTAL passed ($PERCENTAGE%)"
+          else
+            echo "Overall:        0/0 passed (no tests found)"
+          fi
           echo ""
           
           if [ "$DETERMINISM" = "false" ]; then

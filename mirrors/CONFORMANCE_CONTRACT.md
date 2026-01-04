@@ -327,6 +327,8 @@ BASE120_FIXED_TIMESTAMP="2026-01-01T00:00:00.000000Z" node dist/validate.js arti
 
 Your implementation MUST respect this environment variable if it generates any timestamp-based data.
 
+**Language-Agnostic Note**: This environment variable should be respected by all mirror implementations regardless of programming language. Check for its presence at runtime and use the provided timestamp instead of generating dynamic timestamps.
+
 ---
 
 ## Certification Process

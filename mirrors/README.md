@@ -433,3 +433,9 @@ Mirror implementations are community-driven. Contributions welcome!
 **Last Updated**: 2026-01-04  
 **Document Version**: 1.0.0  
 **Status**: Official Mirror Registry
+
+**Maintenance Note**: This document should be updated when:
+- New mirrors are certified or deprecated
+- Conformance requirements change
+- CI workflow inputs or behavior changes
+- Troubleshooting guidance is added or updated
